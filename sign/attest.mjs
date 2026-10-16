@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Experiment: a formal attestation of an assumeUTXO snapshot, statement v2, signed as a kind 3332 Nostr event (regular, not
+// Experiment: a formal attestation of an assumeUTXO snapshot, statement 0.0.1, signed as a kind 3332 Nostr event (regular, not
 // replaceable: a wrong attestation stays; a correction is a new event that references it). Site issues #1 and #4.
 // Nothing is typed. From the running node over --rpc: the implementation (BIP 14 user agent), the chainstate provenance
 // (getchainstates: full sync or started from a snapshot, validated or not) and, for a node whose tip is the height, the facts
@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 const HOME = homedir(); const ROOT = process.env.ASSUMEUTXO_SITE ?? `${HOME}/datawiki`; // the record (data/, attestations/)
-export const VERSION = '0.0.2', KIND = 3332, CLIENT = ['client', 'assumeutxo sign', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
+export const VERSION = '0.0.2', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
 const sha256file = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
 import { makeRpc } from './rpc.mjs';
@@ -53,7 +53,7 @@ const { finalizeEvent, publicKey } = await import(`${HOME}/remote/github.com/bit
 const pub = publicKey(Buffer.from(priv, 'hex')); const did = JSON.parse(readFileSync(`${keyDir}/agent.did.json`, 'utf8')).id; if (did !== 'did:nostr:' + pub) throw new Error('the key does not match agent.did.json');
 
 // the statement: subject (what is attested) and claim (what this node did), canonical (RFC 8785)
-const stmt = { v: 2, type: 'assumeutxo-attestation',
+const stmt = { v: STATEMENT, type: 'assumeutxo-attestation',
   subject: { network, genesis, height, blockHash: facts.blockHash, txoutsetHash: facts.txoutsetHash, hashType: 'hash_serialized_3', ...(facts.coins ? { coins: facts.coins } : {}), ...(facts.chainTxCount ? { chainTxCount: facts.chainTxCount } : {}), ...(fileSha256 ? { fileSha256 } : {}) },
   claim: { method, chainstate, validated, implementation, ...(build ? { build } : {}), ...(commit ? { commit } : {}), ...(binarySha256 ? { binarySha256 } : {}), computedAt, ...(note ? { note } : {}) } };
 const content = jcs(stmt);

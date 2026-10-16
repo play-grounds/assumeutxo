@@ -1,6 +1,7 @@
-# Attestation statement, v2
+# Attestation statement, 0.0.1
 
-Draft. What a node says about an assumeUTXO snapshot, and the envelope it is signed in. Site issues
+Draft. `v` is the statement's version, 0.0.1 until the first attestation worth a name is signed, bumped on every change before
+that; a verifier reads it first. What a node says about an assumeUTXO snapshot, and the envelope it is signed in. Site issues
 [1](https://github.com/assumeutxo/assumeutxo.github.io/issues/1) and [4](https://github.com/assumeutxo/assumeutxo.github.io/issues/4).
 
 ## Statement
@@ -10,7 +11,7 @@ attester of the same snapshot; and the **claim**, what this node did to know it.
 
 ```json
 {
-  "v": 2,
+  "v": "0.0.1",
   "type": "assumeutxo-attestation",
   "subject": {
     "network": "tbtc4",

@@ -27,7 +27,7 @@ a { color: var(--accent); }
 <body>
 <main>
 <h1>Sign an attestation</h1>
-<p class="sub">A formal attestation of an assumeUTXO snapshot, statement v2, from your node's own output, signed by your key. An attestation is not replaceable: a wrong one stays, and a correction is a new event. Experiment; the design is <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/1">issue 1</a> and <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/4">issue 4</a> on the record.</p>
+<p class="sub">A formal attestation of an assumeUTXO snapshot, statement 0.0.1, from your node's own output, signed by your key. An attestation is not replaceable: a wrong one stays, and a correction is a new event. Experiment; the design is <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/1">issue 1</a> and <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/4">issue 4</a> on the record.</p>
 
 <section>
 <h2>1. What your node computed</h2>
@@ -86,7 +86,7 @@ a { color: var(--accent); }
 import { schnorr } from 'https://cdn.jsdelivr.net/npm/@noble/curves@1.6.0/secp256k1/+esm';
 const $ = (id) => document.getElementById(id);
 const RECORD = 'https://assumeutxo.com/';
-const VERSION = '0.0.2', KIND = 3332, CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
+const VERSION = '0.0.2', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
 // genesis by network; forks share their parent's genesis, the block hash in the subject tells them apart
 let GENESIS = { btc: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', tbtc3: '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943', tbtc4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043', signet: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6', xbt: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', txbt4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043' };
 const NETWORKS = Object.keys(GENESIS);
@@ -146,7 +146,7 @@ function build() {
   const claim = { method: $('method').value, chainstate: p.chainstate, validated: p.validated, implementation: v('impl') };
   if (v('build')) claim.build = v('build'); if (/^[0-9a-f]{40}$/i.test(v('commit'))) claim.commit = v('commit').toLowerCase(); if (hex64('binsha')) claim.binarySha256 = hex64('binsha');
   claim.computedAt = v('computed') ? new Date(v('computed')).toISOString().slice(0, 19) + 'Z' : undefined; if (v('note')) claim.note = v('note');
-  const stmt = { v: 2, type: 'assumeutxo-attestation', subject, claim };
+  const stmt = { v: STATEMENT, type: 'assumeutxo-attestation', subject, claim };
   current = stmt; $('stmt').textContent = JSON.stringify(stmt, null, 2) + '\n\ncanonical: ' + jcs(stmt);
   const S = record?.find((s) => s.network === subject.network && s.height === subject.height);
   $('check').className = 'note ' + (S ? (S.txoutsetHash === subject.txoutsetHash ? 'ok' : 'bad') : '');
