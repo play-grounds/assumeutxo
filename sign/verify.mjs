@@ -14,8 +14,9 @@ if (id !== ev.id) fail('id does not match the event'); if (!schnorr.verify(ev.si
 if (ev.kind !== 3332) fail('kind is ' + ev.kind + ', not 3332');
 const st = JSON.parse(ev.content); if (jcs(st) !== ev.content) fail('content is not canonical (RFC 8785)');
 if (st.v !== '0.0.1' || st['@type'] !== 'Attestation') fail('not an Attestation statement 0.0.1');
-const { subject: s, claim: c } = st; for (const k of ['network', 'genesis', 'height', 'blockHash', 'txoutsetHash', 'hashType']) if (s?.[k] === undefined) fail('subject lacks ' + k);
-for (const k of ['method', 'chainstate', 'validated', 'implementation', 'computedAt']) if (c?.[k] === undefined) fail('claim lacks ' + k);
+const { subject: s, claim: c } = st; for (const k of ['blockHash', 'txoutsetHash', 'hashType']) if (s?.[k] === undefined) fail('subject lacks ' + k); // required
+for (const k of ['method', 'chainstate', 'validated']) if (c?.[k] === undefined) fail('claim lacks ' + k);
+if (!/^[0-9a-f]{64}$/.test(s.blockHash) || !/^[0-9a-f]{64}$/.test(s.txoutsetHash)) fail('hashes must be 64 hex'); if (s.hashType !== 'hash_serialized_3') fail('hashType ' + s.hashType + ' is not one this verifier knows');
 if (!['recomputed', 'loaded'].includes(c.method)) fail('method ' + c.method); if (c.method === 'loaded' && !(c.validated && c.chainstate.startsWith('snapshot:'))) fail('loaded without a validated snapshot chainstate');
 if (c.method === 'recomputed' && c.chainstate.startsWith('snapshot:') && Number(c.chainstate.slice(9)) >= s.height) fail('recomputed by a node whose chainstate came from a snapshot at or above the height');
 if (c.note && (c.note.length > 200 || /:\/\/|www\./i.test(c.note))) fail('note too long or carries a link');
@@ -25,8 +26,8 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 if (arg('--rpc')) {
   const { makeRpc } = await import('./rpc.mjs'); const { dirname, resolve } = await import('node:path'); const rpc = makeRpc(arg('--rpc'), arg('--datadir') ?? dirname(resolve(arg('--rpc'))));
   let h; try { h = await rpc('getblockheader', s.blockHash); } catch { fail(`block ${s.blockHash} is not known to the node of ${s.network}`); }
-  if (h.height !== s.height) fail(`block is at height ${h.height} on ${s.network}, not ${s.height}`); if (h.confirmations < 1) fail('block is not on the best chain of ' + s.network);
-  const g = await rpc('getblockhash', 0); if (g !== s.genesis) fail(`genesis differs from the node's: ${g}`);
-  console.log(`on chain: ${s.network} has ${s.blockHash.slice(0, 16)}… at ${s.height}, ${h.confirmations} confirmations`);
+  if (s.height !== undefined && h.height !== s.height) fail(`block is at height ${h.height} on ${s.network}, not ${s.height}`); if (h.confirmations < 1) fail('block is not on the best chain of ' + s.network);
+  const g = await rpc('getblockhash', 0); if (s.genesis !== undefined && g !== s.genesis) fail(`genesis differs from the node's: ${g}`);
+  console.log(`on chain: ${s.network ?? 'the node'} has ${s.blockHash.slice(0, 16)}… at ${h.height}, ${h.confirmations} confirmations`);
 }
-console.log(`ok: ${s.network} ${s.height} ${s.txoutsetHash} ${c.method} by did:nostr:${ev.pubkey} (${c.implementation}, ${c.chainstate}, computed ${c.computedAt})`);
+console.log(`ok: ${s.network ?? '?'} ${s.height ?? '?'} ${s.txoutsetHash} ${c.method} by did:nostr:${ev.pubkey} (${c.implementation ?? 'implementation not stated'}, ${c.chainstate}${c.computedAt ? ', computed ' + c.computedAt : ''})`);

@@ -60,6 +60,21 @@ Endorsement and FraudProof will be types in the same vocabulary.
 
 There is no signer field: identity lives in the envelope, so the same statement can be signed by a Nostr key or a GPG key.
 
+## Required and optional
+
+The bar today is the informal attestation: a comment on a thread saying "I got this hash", linked. A formal attestation is that
+same claim, signed and checkable, and it needs no more than the claim. Required:
+
+- `subject.blockHash`, `subject.txoutsetHash`, `subject.hashType`: the claim.
+- `claim.method`, `claim.chainstate`, `claim.validated`: how the node knew it, so `recomputed` cannot be hollow.
+- `v` and `@type`.
+
+Everything else is context, filled in when the signer can: `height`, `network` and `genesis` place the block for a reader without a
+node (a node derives them from the block hash); `coins` and `chainTxCount` are further facts; `implementation`, `build`, `commit`
+and `binarySha256` are self-reported provenance; `computedAt`, `note` and `fileSha256` are context. An optional field, when
+present, must be true and is checked like a required one. A page-signed attestation with only the core is valid; a tool-signed
+one is the same attestation with more to check.
+
 ## Nostr envelope
 
 Kind **3332**, a regular event: not replaceable, not addressable. A wrong attestation stays on the relays; a correction is a new event
