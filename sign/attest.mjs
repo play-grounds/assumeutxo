@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Experiment: build a formal attestation (site issues #1 and #4): a canonical statement from a node's own output, signed as a kind 33332 Nostr
-// event by the key in a folder's git config (npm init agent), written under attestations/<network>-<height>/<npub>.json.
+// event by the key in a folder's git config (npm init agent), written under attestations/<network>-<height>/<pubkey hex>.json.
 // The node's output is given, never typed: --from <dumptxoutset JSON> (the object dumptxoutset prints) or --rpc <conf> [--datadir, --rpcport]
 // for a node whose tip is the height (gettxoutsetinfo hash_serialized_3). --dry prints the statement and signs nothing.
 //   node sign/attest.mjs --network tbtc4 --height 150000 --from check-150000.json --method recomputed --key ~/knots-testnet4/shadow-agent --implementation "…" [--note "…"] [--dry]
@@ -27,7 +27,7 @@ if (facts.height !== height) throw new Error(`the output is for height ${facts.h
 if (!implementation) throw new Error('--implementation is required with --from (e.g. the node\'s getnetworkinfo subversion)');
 // the key
 const priv = execFileSync('git', ['-C', keyDir, 'config', '--get', 'nostr.privkey'], { encoding: 'utf8' }).trim(); if (!/^[0-9a-f]{64}$/.test(priv)) throw new Error('no key in ' + keyDir);
-const { finalizeEvent, publicKey } = await import(`${HOME}/remote/github.com/bitcoin-desktop/headers/publisher/nostr.js`); const { npub } = await import(`${ROOT}/tools/npub.mjs`);
+const { finalizeEvent, publicKey } = await import(`${HOME}/remote/github.com/bitcoin-desktop/headers/publisher/nostr.js`);
 const pub = publicKey(Buffer.from(priv, 'hex')); const did = JSON.parse(readFileSync(`${keyDir}/agent.did.json`, 'utf8')).id; if (did !== 'did:nostr:' + pub) throw new Error('the key does not match agent.did.json');
 // the statement, canonical (JCS: sorted keys, no whitespace)
 const stmt = { v: 1, network, height, blockHash: facts.blockHash, txoutsetHash: facts.txoutsetHash, method, implementation, at: new Date().toISOString().slice(0, 10), by: did };
