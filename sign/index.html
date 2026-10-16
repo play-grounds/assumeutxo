@@ -95,8 +95,10 @@ const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Arr
 
 // networks, from the record when reachable
 for (const n of NETWORKS) $('network').add(new Option(n, n));
-fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const N = j.networks; GENESIS = Object.fromEntries(N.map((n) => [n.id, n.genesis ?? N.find((m) => '#' + m.id === n.forkOf?.['@id'])?.genesis])); $('network').replaceChildren(...Object.keys(GENESIS).map((id) => new Option(id, id))); build(); }).catch(() => {});
+fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const N = j.networks; GENESIS = Object.fromEntries(N.map((n) => [n.id, n.genesis ?? N.find((m) => '#' + m.id === n.forkOf?.['@id'])?.genesis])); const want = $('network').value; $('network').replaceChildren(...Object.keys(GENESIS).map((id) => new Option(id, id))); if (GENESIS[want]) $('network').value = want; build(); }).catch(() => {});
 $('computed').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+// fields from the link: ?network=tbtc4&height=150000&method=recomputed&impl=…&note=… (the facts themselves are never in a link; they come from the node)
+{ const q = new URLSearchParams(location.search); for (const [k, id] of [['network', 'network'], ['method', 'method'], ['impl', 'impl'], ['note', 'note'], ['build', 'build'], ['commit', 'commit']]) if (q.get(k)) $(id).value = q.get(k); if (q.get('height')) $('dump').placeholder = `paste the dumptxoutset output for height ${q.get('height')}`; window.__wantHeight = Number(q.get('height')) || undefined; }
 let record = null; fetch(RECORD + 'data/snapshots.json').then((r) => r.json()).then((j) => { record = j.snapshots; build(); }).catch(() => {});
 
 let signer = null; // { pubkey, sign(event) }
@@ -129,6 +131,7 @@ function build() {
   const f = facts(); const p = provenance(); const v = (id) => $(id).value.trim();
   const problems = [];
   if (f?.error) problems.push(f.error); if (p.error) problems.push(p.error);
+  if (f && !f.error && window.__wantHeight && f.height !== window.__wantHeight) problems.push(`this link is for height ${window.__wantHeight}; the pasted output is for ${f.height}`);
   if (f && !f.error && !p.error) {
     if ($('method').value === 'loaded' && !(p.snapshotHeight && p.validated)) problems.push('loaded means: this node started from the snapshot and background validation finished; this node reports ' + p.chainstate + ', validated ' + p.validated);
     if ($('method').value === 'recomputed' && !p.validated) problems.push('recomputed needs a validated chainstate');

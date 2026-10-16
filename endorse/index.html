@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endorse keys</title>
+<meta name="description" content="Publish the NIP-51 set of keys you control, and keep your profile, signed by your NIP-07 extension. The controller's half of NIP-332's subkeys section.">
+<style>
+:root { --bg: #fff; --fg: #1a1a1a; --muted: #666; --line: #e3e3e3; --accent: #1f6feb; --ok: #1a7f37; --bad: #b42318; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; } .sub { color: var(--muted); margin: 0 0 24px; }
+section { border-top: 1px solid var(--line); padding: 18px 0; } h2 { font-size: 1rem; margin: 0 0 10px; }
+label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 4px; }
+input, select, textarea { width: 100%; box-sizing: border-box; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+textarea { font-family: var(--mono); font-size: .8rem; min-height: 72px; }
+pre { font-family: var(--mono); font-size: .78rem; white-space: pre-wrap; word-break: break-all; background: #f4f4f4; padding: 10px; border-radius: 6px; }
+button { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; margin: 8px 8px 0 0; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .note { color: var(--muted); font-size: .85rem; }
+.row { display: grid; grid-template-columns: 2fr 1fr 2fr auto; gap: 8px; align-items: end; } @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Endorse keys</h1>
+<p class="sub">The controller's half of <a href="https://nip-332.github.io/spec/">NIP-332</a>'s subkeys: a NIP-51 set, kind 30000, naming the keys you control and their roles. Each named key's profile names you back; a record shows "controlled by" only when both hold. Signed by your extension; nothing here sees your key.</p>
+
+<section>
+<h2>1. Your key</h2>
+<button id="ext">Use my extension</button>
+<p id="who" class="note">No key yet. Fields can be filled from the link: <code>?d=keys&amp;p=&lt;pubkey&gt;:&lt;role&gt;:&lt;label&gt;</code>, repeated.</p>
+<p id="profile" class="note"></p>
+</section>
+
+<section>
+<h2>2. The keys you control</h2>
+<label for="d">Set name (the <code>d</code> tag)</label>
+<input id="d" value="keys" spellcheck="false">
+<div id="rows"></div>
+<button id="add">Add a key</button>
+<p class="note">Roles are words of your choosing: <code>node</code>, <code>site</code>, <code>announcer</code>. Removing a key later is revoking it: publish the set again without it.</p>
+</section>
+
+<section>
+<h2>3. The set</h2>
+<pre id="setjson">…</pre>
+<button id="signset" class="primary">Sign and publish the key set</button>
+<p id="setout" class="note"></p>
+</section>
+
+<section>
+<h2>4. Your profile, optional</h2>
+<p class="note">Fetched from the relays as it is. Add a GitHub identity (<a href="https://github.com/nostr-protocol/nips/blob/master/39.md">NIP-39</a>): a public gist whose content is your npub, then the handle and the gist id here. Nothing else in the profile changes.</p>
+<div class="row"><div><label for="gh">GitHub handle</label><input id="gh" spellcheck="false" placeholder="melvincarvalho"></div><div></div><div><label for="gist">Gist id</label><input id="gist" spellcheck="false" placeholder="32 hex"></div><div></div></div>
+<pre id="profjson">…</pre>
+<button id="signprof">Sign and publish the profile</button>
+<p id="profout" class="note"></p>
+</section>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.nostr.band', 'wss://purplepag.es'];
+const hex64 = (s) => /^[0-9a-f]{64}$/i.test(s || '');
+let pubkey = null, profileEv = null;
+// bech32 npub -> hex, so a pasted npub works in a key field
+const CH = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+const fromNpub = (s) => { if (!/^npub1[0-9a-z]{58}$/.test(s)) return s; const d = [...s.slice(5, -6)].map((c) => CH.indexOf(c)); let acc = 0, bits = 0, out = []; for (const v of d) { acc = (acc << 5) | v; bits += 5; while (bits >= 8) { bits -= 8; out.push((acc >> bits) & 255); } } return out.map((b) => b.toString(16).padStart(2, '0')).join(''); };
+
+// rows of keys, from the query string
+const q = new URLSearchParams(location.search); if (q.get('d')) $('d').value = q.get('d');
+function addRow(pk = '', role = '', label = '') {
+  const r = document.createElement('div'); r.className = 'row';
+  r.innerHTML = `<div><label>public key (hex or npub)</label><input class="pk" spellcheck="false" placeholder="64 hex"></div><div><label>role</label><input class="role" spellcheck="false" placeholder="node"></div><div><label>label</label><input class="label" placeholder="shadow, Plumb on txbt4"></div><div><button class="rm">remove</button></div>`;
+  r.querySelector('.pk').value = pk; r.querySelector('.role').value = role; r.querySelector('.label').value = label;
+  r.querySelector('.rm').onclick = () => { r.remove(); build(); }; for (const i of r.querySelectorAll('input')) i.addEventListener('input', build);
+  $('rows').append(r);
+}
+const given = q.getAll('p'); if (given.length) for (const p of given) { const [pk, role, ...label] = p.split(':'); addRow(fromNpub(pk.trim()), role || '', label.join(':')); } else addRow();
+$('add').onclick = () => { addRow(); build(); }; $('d').addEventListener('input', build);
+if (q.get('gh')) $('gh').value = q.get('gh'); if (q.get('gist')) $('gist').value = q.get('gist'); for (const id of ['gh', 'gist']) $(id).addEventListener('input', build);
+
+function keys() { return [...document.querySelectorAll('#rows .row')].map((r) => ({ pk: fromNpub(r.querySelector('.pk').value.trim().toLowerCase()), role: r.querySelector('.role').value.trim(), label: r.querySelector('.label').value.trim() })).filter((k) => k.pk); }
+let setEvent = null, profEvent = null;
+function build() {
+  const ks = keys(); const bad = ks.filter((k) => !hex64(k.pk));
+  const tags = [['d', $('d').value.trim() || 'keys'], ['title', $('d').value.trim() || 'keys'], ...ks.map((k) => ['p', k.pk, '', k.role, k.label].filter((x, i) => i < 2 || x || i === 2))];
+  setEvent = { kind: 30000, created_at: Math.floor(Date.now() / 1000), tags, content: '' };
+  $('setjson').textContent = (bad.length ? 'not a key: ' + bad.map((k) => k.pk.slice(0, 12) + '…').join(', ') + '\n\n' : '') + JSON.stringify({ ...setEvent, pubkey: pubkey || '(your key)' }, null, 2);
+  // the profile: as fetched, plus the NIP-39 github tag when both fields are given
+  if (profileEv) { let content = {}; try { content = JSON.parse(profileEv.content); } catch {} const tags = profileEv.tags.filter((t) => !(t[0] === 'i' && String(t[1]).startsWith('github:'))); const gh = $('gh').value.trim(), gist = $('gist').value.trim(); if (gh && gist) tags.push(['i', 'github:' + gh, gist]);
+    profEvent = { kind: 0, created_at: Math.floor(Date.now() / 1000), tags, content: JSON.stringify(content) }; $('profjson').textContent = JSON.stringify({ ...profEvent, content, pubkey }, null, 2); }
+  else $('profjson').textContent = pubkey ? 'no profile found on the relays for this key' : '…';
+}
+for (const id of ['d']) $(id).addEventListener('input', build);
+
+function fetchProfile(pk) { return new Promise((res) => { let best = null, open = 0; const done = () => { if (--open === 0) res(best); };
+  for (const url of RELAYS) { let ws; try { ws = new WebSocket(url); } catch { continue; } open++; const t = setTimeout(() => { try { ws.close(); } catch {} }, 8000);
+    ws.onopen = () => ws.send(JSON.stringify(['REQ', 'p', { kinds: [0], authors: [pk], limit: 1 }]));
+    ws.onmessage = (m) => { try { const d = JSON.parse(m.data); if (d[0] === 'EVENT' && (!best || d[2].created_at > best.created_at)) best = d[2]; if (d[0] === 'EOSE') ws.close(); } catch {} };
+    ws.onerror = () => {}; ws.onclose = () => { clearTimeout(t); done(); }; } if (!open) res(null); }); }
+$('ext').onclick = async () => {
+  if (!window.nostr) { $('who').textContent = 'No NIP-07 extension found in this browser.'; return; }
+  pubkey = await window.nostr.getPublicKey(); $('who').textContent = 'did:nostr:' + pubkey; $('profile').textContent = 'fetching your profile…';
+  profileEv = await fetchProfile(pubkey); let c = {}; try { c = JSON.parse(profileEv?.content || '{}'); } catch {}
+  $('profile').textContent = profileEv ? `profile: ${c.name || c.display_name || '?'} · ${c.nip05 || ''} · last set ${new Date(profileEv.created_at * 1000).toISOString().slice(0, 10)}` : 'no profile on these relays'; build();
+};
+function publish(ev, out) { return new Promise((res) => { let ok = 0, n = 0, open = 0; out.textContent = 'publishing…'; const done = () => { if (--open === 0) { out.className = 'note ' + (ok ? 'ok' : 'bad'); out.textContent = `${ok} of ${n} relays accepted · event ${ev.id}`; res(ok); } };
+  for (const url of RELAYS) { let ws; try { ws = new WebSocket(url); } catch { continue; } open++; n++; const t = setTimeout(() => { try { ws.close(); } catch {} }, 10000);
+    ws.onopen = () => ws.send(JSON.stringify(['EVENT', ev])); ws.onmessage = (m) => { try { const d = JSON.parse(m.data); if (d[0] === 'OK' && d[1] === ev.id) { if (d[2]) ok++; ws.close(); } } catch {} };
+    ws.onerror = () => {}; ws.onclose = () => { clearTimeout(t); done(); }; } }); }
+$('signset').onclick = async () => { build(); if (!pubkey) return alert('choose your key first'); if (!keys().length || keys().some((k) => !hex64(k.pk))) return alert('every key must be 64 hex or an npub'); const ev = await window.nostr.signEvent({ ...setEvent, created_at: Math.floor(Date.now() / 1000), pubkey }); $('setjson').textContent = JSON.stringify(ev, null, 2); await publish(ev, $('setout')); };
+$('signprof').onclick = async () => { build(); if (!pubkey) return alert('choose your key first'); if (!profEvent) return alert('no profile to sign'); const ev = await window.nostr.signEvent({ ...profEvent, created_at: Math.floor(Date.now() / 1000), pubkey }); $('profjson').textContent = JSON.stringify(ev, null, 2); await publish(ev, $('profout')); };
+build();
+</script>
+</body>
+</html>
