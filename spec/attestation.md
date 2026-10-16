@@ -37,8 +37,11 @@ attester of the same snapshot; and the **claim**, what this node did to know it.
 }
 ```
 
-Subject: `network` is an id from the record's networks list; `genesis` is the chain's genesis block hash so the statement is
-readable without the list (a fork shares its parent's genesis; `blockHash` tells them apart). `hashType` names the function behind
+Subject: the snapshot is identified by `genesis`, `height` and `blockHash`, and by nothing else. Two chains can share a genesis
+(a fork does), and names and magic bytes are set by the client, so `network` is a label for readers and relay queries, not part of
+the identity; a verifier on the record's side checks with a node of the named chain that `blockHash` is on it, and refuses a
+mislabelled event. Below a fork point the two chains are one chain: an attestation of a block that lies on more than one chain holds
+for all of them, and the record shows it on each. `hashType` names the function behind
 `txoutsetHash`: today `hash_serialized_3`. `coins` and `chainTxCount` are what Core's chainparams pin beside the hash. `fileSha256`,
 optional, is the snapshot file the node wrote: a possession claim, separate from the hash claim.
 
