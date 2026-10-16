@@ -29,6 +29,7 @@ a { color: var(--accent); }
 
 <section>
 <h2>1. What your node computed</h2>
+<p class="note">Easiest: <code>npx assumeutxo link --rpc ~/.bitcoin/bitcoin.conf --height 965000</code> does the node work and prints a link to this page with every field filled; open it and go to step 2.</p>
 <label for="dump">The JSON that <code>dumptxoutset</code> printed (or <code>gettxoutsetinfo hash_serialized_3</code> at the snapshot height)</label>
 <textarea id="dump" placeholder='{"coins_written": …, "base_hash": "…", "base_height": …, "txoutset_hash": "…", "nchaintx": …}'></textarea>
 <div class="row">
