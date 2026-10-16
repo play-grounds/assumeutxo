@@ -62,7 +62,7 @@ const S = JSON.parse(readFileSync(`${ROOT}/data/snapshots.json`, 'utf8')).snapsh
 console.log(S ? (S.txoutsetHash === stmt.subject.txoutsetHash ? 'matches the entry on the record' : `DISAGREES with the entry on the record (${S.txoutsetHash})`) : 'no entry on the record for this height');
 if (DRY) { console.log('dry run: nothing signed'); process.exit(0); }
 // the envelope: tags repeat the subject for relay queries; the content is authoritative, and verify checks they agree
-const tags = [['network', network], ['height', String(height)], ['hash', facts.blockHash], ['txoutset_hash', facts.txoutsetHash], ['method', method], ['implementation', implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', network]];
+const tags = [['v', STATEMENT], ['network', network], ['height', String(height)], ['hash', facts.blockHash], ['txoutset_hash', facts.txoutsetHash], ['method', method], ['implementation', implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', network]];
 const ev = finalizeEvent({ kind: KIND, pubkey: pub, created_at: Math.floor(Date.now() / 1000), content, tags }, Buffer.from(priv, 'hex'));
 const dir = `${ROOT}/attestations/${network}-${height}`; mkdirSync(dir, { recursive: true }); const file = `${dir}/${pub}.json`;
 if (existsSync(file)) throw new Error(`${file} exists: an attestation is not replaced; a correction is a new event that references it`);

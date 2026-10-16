@@ -20,7 +20,7 @@ if (!/^[0-9a-f]{64}$/.test(s.blockHash) || !/^[0-9a-f]{64}$/.test(s.txoutsetHash
 if (!['recomputed', 'loaded'].includes(c.method)) fail('method ' + c.method); if (c.method === 'loaded' && !(c.validated && c.chainstate.startsWith('snapshot:'))) fail('loaded without a validated snapshot chainstate');
 if (c.method === 'recomputed' && c.chainstate.startsWith('snapshot:') && Number(c.chainstate.slice(9)) >= s.height) fail('recomputed by a node whose chainstate came from a snapshot at or above the height');
 if (c.note && (c.note.length > 200 || /:\/\/|www\./i.test(c.note))) fail('note too long or carries a link');
-const tag = (n) => ev.tags.find((t) => t[0] === n)?.[1]; const want = { network: s.network, height: String(s.height), hash: s.blockHash, txoutset_hash: s.txoutsetHash, method: c.method, implementation: c.implementation };
+const tag = (n) => ev.tags.find((t) => t[0] === n)?.[1]; const want = { v: st.v, network: s.network, height: String(s.height), hash: s.blockHash, txoutset_hash: s.txoutsetHash, method: c.method, implementation: c.implementation };
 for (const [k, v] of Object.entries(want)) if (tag(k) !== undefined && tag(k) !== v) fail(`tag ${k} disagrees with the content`);
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 if (arg('--rpc')) {

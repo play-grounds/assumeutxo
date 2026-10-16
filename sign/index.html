@@ -157,7 +157,7 @@ $('sign').onclick = async () => {
   build(); if (!current) return alert('paste what your node printed first');
   if (!signer) return alert('choose a key first'); if (!current.claim.implementation) return alert('paste your node\'s subversion');
   const { subject: s, claim: c } = current; // tags repeat the subject for relay queries; the content is authoritative
-  const tags = [['network', s.network], ['height', String(s.height)], ['hash', s.blockHash], ['txoutset_hash', s.txoutsetHash], ['method', c.method], ['implementation', c.implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', s.network]];
+  const tags = [['v', STATEMENT], ['network', s.network], ['height', String(s.height)], ['hash', s.blockHash], ['txoutset_hash', s.txoutsetHash], ['method', c.method], ['implementation', c.implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', s.network]];
   event = await signer.sign({ kind: KIND, pubkey: signer.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: jcs(current) });
   $('event').textContent = JSON.stringify(event, null, 2); $('out').hidden = false; $('pub').textContent = '';
 };
