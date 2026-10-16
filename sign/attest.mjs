@@ -6,14 +6,14 @@
 // (gettxoutsetinfo hash_serialized_3). From --from: the JSON that dumptxoutset printed (its mtime is the computation time).
 // From --source: the release tag, the commit and the binary's sha256. From --file: the sha256 of the snapshot file written.
 //   node sign/attest.mjs --network tbtc4 --height 150000 --from check-150000.json --rpc ~/node/bitcoin.conf --source ~/plumb --file check-150000.dat --method recomputed --key ~/node/agent [--note "…"] [--dry]
-import { readFileSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, statSync, existsSync , openSync, readSync, closeSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 const HOME = homedir(); const ROOT = process.env.ASSUMEUTXO_SITE ?? `${HOME}/datawiki`; // the record (data/, attestations/)
 export const VERSION = '0.0.1', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
-const sha256file = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
+const sha256file = (p) => { const h = createHash('sha256'), fd = openSync(p, 'r'), buf = Buffer.alloc(1 << 24); let n; while ((n = readSync(fd, buf)) > 0) h.update(buf.subarray(0, n)); closeSync(fd); return h.digest('hex'); }; // streamed: snapshots exceed the 2 GiB readFileSync cap
 
 import { makeRpc } from './rpc.mjs';
 export const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? '[' + v.map(jcs).join(',') + ']' : '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + jcs(v[k])).join(',') + '}';
