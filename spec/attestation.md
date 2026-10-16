@@ -82,6 +82,33 @@ that references the old one. The content is the canonical statement. Tags repeat
 `hash`, `txoutset_hash`, `method`, `implementation`, `t`), and a `client` tag names what signed it. The content is authoritative; a
 verifier checks that the tags agree with it and rejects the event if they do not.
 
+The event the tool wrote for the test above (a throwaway key; the content is the canonical statement, one line, shortened here):
+
+```json
+{
+  "kind": 3332,
+  "pubkey": "c77fba35e5cdf0f3e7c37655c6ccd19924c462f5ae9629cf2f9fa0950a59199d",
+  "created_at": 1792132900,
+  "tags": [
+    ["network", "txbt4"],
+    ["height", "150307"],
+    ["hash", "000000000017ec2251d81c8d2ca401c713e98e85196c7f660a4088a7ca57b1cc"],
+    ["txoutset_hash", "372bfcaeef1e93892acccda9e700b00bf90f45d73746d69959d33620a3df5518"],
+    ["method", "recomputed"],
+    ["implementation", "/Satoshi:29.4.2/Knots:20260508/Plumb:6/"],
+    ["client", "assumeutxo sign", "https://play-grounds.github.io/assumeutxo/sign/", "0.0.2"],
+    ["t", "attestation"],
+    ["t", "assumeutxo"],
+    ["t", "txbt4"]
+  ],
+  "content": "{\"@type\":\"Attestation\",\"claim\":{\"chainstate\":\"full\",…},\"subject\":{\"blockHash\":\"000000000017ec22…\",…},\"v\":\"0.0.1\"}",
+  "id": "707332a2ca8390e147fc599bcdfe88dacf7a59b2c0e470a7aba1e15d9af441da",
+  "sig": "f17ab2c3b1e5ba74eeba6e778f7cba9974a8a80e9f3e9e8e5e855e15c301338a938bece0fb5453433116f33b5ced3c8b2cd04267bf05a015cba48b8b294f9ecf"
+}
+```
+
+The file is `attestations/<network>-<height>/<pubkey>.json`, the event as JSON, and `sign/verify.mjs` checks it.
+
 ## GPG envelope
 
 A clearsign of the canonical statement, with the key's fingerprint as the file name. (Next.)
