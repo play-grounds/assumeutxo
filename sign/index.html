@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign an attestation</title>
+<meta name="description" content="Make a formal assumeUTXO attestation (kind 33332) from your node's own dumptxoutset output, signed in the browser.">
+<style>
+:root { --bg: #fff; --fg: #1a1a1a; --muted: #666; --line: #e3e3e3; --accent: #1f6feb; --ok: #1a7f37; --bad: #b42318; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #111; --fg: #e6e6e6; --muted: #9a9a9a; --line: #2a2a2a; --accent: #4c8dff; --ok: #3fb950; --bad: #f85149; } }
+:root[data-theme="dark"] { --bg: #111; --fg: #e6e6e6; --muted: #9a9a9a; --line: #2a2a2a; --accent: #4c8dff; --ok: #3fb950; --bad: #f85149; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; } .sub { color: var(--muted); margin: 0 0 24px; }
+section { border-top: 1px solid var(--line); padding: 18px 0; } h2 { font-size: 1rem; margin: 0 0 10px; }
+label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 4px; }
+input, select, textarea { width: 100%; box-sizing: border-box; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+textarea { font-family: var(--mono); font-size: .8rem; min-height: 96px; }
+pre { font-family: var(--mono); font-size: .78rem; white-space: pre-wrap; word-break: break-all; background: color-mix(in srgb, var(--fg) 5%, var(--bg)); padding: 10px; border-radius: 6px; }
+button { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; margin: 8px 8px 0 0; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .note { color: var(--muted); font-size: .85rem; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Sign an attestation</h1>
+<p class="sub">A formal attestation of an assumeUTXO snapshot, from your node's own output, signed by your key. Experiment; the design is <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/1">issue 1</a> and <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/4">issue 4</a> on the record.</p>
+
+<section>
+<h2>1. What your node computed</h2>
+<label for="dump">The JSON that <code>dumptxoutset</code> printed (or <code>gettxoutsetinfo hash_serialized_3</code> at the snapshot height)</label>
+<textarea id="dump" placeholder='{"coins_written": …, "base_hash": "…", "base_height": …, "txoutset_hash": "…", "nchaintx": …}'></textarea>
+<div class="row">
+<div><label for="network">Network</label><select id="network"></select></div>
+<div><label for="method">Method</label><select id="method"><option value="recomputed">recomputed: my node built this set from blocks</option><option value="loaded">loaded: my node loaded this snapshot and validated the chain behind it</option></select></div>
+</div>
+<label for="impl">Implementation: the <code>subversion</code> from your node's <code>getnetworkinfo</code>, pasted, not typed</label>
+<input id="impl" placeholder="/Satoshi:29.0.0/" spellcheck="false">
+<label for="note">Note (optional, the only free text in the statement)</label>
+<input id="note" placeholder="dumptxoutset rollback=… on an unpruned node, today">
+<p id="facts" class="note"></p>
+</section>
+
+<section>
+<h2>2. Your key</h2>
+<p class="note">A NIP-07 extension signs without showing the page your key. Without one, paste a hex private key for a throwaway or agent key; it stays in this tab and is never sent anywhere.</p>
+<button id="ext">Use my extension</button>
+<label for="priv">or a private key (hex)</label>
+<input id="priv" type="password" placeholder="64 hex characters" spellcheck="false" autocomplete="off">
+<p id="who" class="note"></p>
+</section>
+
+<section>
+<h2>3. The statement</h2>
+<pre id="stmt">…</pre>
+<p id="check" class="note"></p>
+<button id="sign" class="primary">Sign</button>
+</section>
+
+<section id="out" hidden>
+<h2>4. The event (kind 33332)</h2>
+<pre id="event"></pre>
+<button id="copy">Copy</button><button id="download">Download</button>
+<label for="relay">Publish to a relay (your click, your event)</label>
+<input id="relay" value="wss://relay.damus.io" spellcheck="false">
+<button id="publish">Publish</button>
+<p id="pub" class="note"></p>
+<p class="note">To put it on the record, open a pull request adding the file as <code>attestations/&lt;network&gt;-&lt;height&gt;/&lt;pubkey&gt;.json</code> in <a href="https://github.com/assumeutxo/assumeutxo.github.io">assumeutxo/assumeutxo.github.io</a>.</p>
+</section>
+</main>
+
+<script type="module">
+import { schnorr } from 'https://cdn.jsdelivr.net/npm/@noble/curves@1.6.0/secp256k1/+esm';
+const $ = (id) => document.getElementById(id);
+const RECORD = 'https://assumeutxo.com/';
+const CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/'];
+const NETWORKS = ['btc', 'tbtc3', 'tbtc4', 'signet', 'xbt', 'txbt4'];
+const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
+const unhex = (h) => Uint8Array.from(h.match(/../g), (x) => parseInt(x, 16));
+const sha256 = async (s) => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
+const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? '[' + v.map(jcs).join(',') + ']' : '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + jcs(v[k])).join(',') + '}';
+
+// networks, from the record when reachable
+for (const n of NETWORKS) $('network').add(new Option(n, n));
+fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const ids = j.networks.map((n) => n.id); $('network').replaceChildren(...ids.map((id) => new Option(id, id))); build(); }).catch(() => {});
+let record = null; fetch(RECORD + 'data/snapshots.json').then((r) => r.json()).then((j) => { record = j.snapshots; build(); }).catch(() => {});
+
+let signer = null; // { pubkey, sign(event) }
+$('ext').onclick = async () => {
+  if (!window.nostr) { $('who').textContent = 'No NIP-07 extension found in this browser.'; return; }
+  const pubkey = await window.nostr.getPublicKey();
+  signer = { pubkey, sign: (ev) => window.nostr.signEvent(ev) }; $('priv').value = ''; $('who').textContent = 'did:nostr:' + pubkey + ' (extension)'; build();
+};
+$('priv').oninput = () => {
+  const k = $('priv').value.trim(); if (!/^[0-9a-f]{64}$/i.test(k)) { if (k) $('who').textContent = 'not a 64-character hex key'; signer = null; build(); return; }
+  const pubkey = hex(schnorr.getPublicKey(unhex(k)));
+  signer = { pubkey, sign: async (ev) => { const id = await sha256(JSON.stringify([0, ev.pubkey, ev.created_at, ev.kind, ev.tags, ev.content])); return { ...ev, id, sig: hex(schnorr.sign(unhex(id), unhex(k))) }; } };
+  $('who').textContent = 'did:nostr:' + pubkey; build();
+};
+
+function facts() {
+  const t = $('dump').value.trim(); if (!t) return null; let j; try { j = JSON.parse(t); } catch { return { error: 'not JSON' }; }
+  if (j.txoutset_hash && j.base_hash) return { height: j.base_height, blockHash: j.base_hash, txoutsetHash: j.txoutset_hash, coins: j.coins_written, chainTxCount: j.nchaintx, from: 'dumptxoutset' };
+  if (j.hash_serialized_3 && j.bestblock) return { height: j.height, blockHash: j.bestblock, txoutsetHash: j.hash_serialized_3, coins: j.txouts, from: 'gettxoutsetinfo' };
+  return { error: 'neither a dumptxoutset result nor a gettxoutsetinfo result' };
+}
+let current = null;
+function build() {
+  const f = facts(); $('facts').textContent = f?.error ? f.error : f ? `${f.from}: height ${f.height}, ${f.coins ?? '?'} coins` : '';
+  if (!f || f.error) { $('stmt').textContent = '…'; $('check').textContent = ''; current = null; return; }
+  const stmt = { v: 1, network: $('network').value, height: f.height, blockHash: f.blockHash, txoutsetHash: f.txoutsetHash, method: $('method').value, implementation: $('impl').value.trim(), at: new Date().toISOString().slice(0, 10), by: signer ? 'did:nostr:' + signer.pubkey : '(no key yet)' };
+  if (f.coins) stmt.coins = f.coins; if (f.chainTxCount) stmt.chainTxCount = f.chainTxCount; if ($('note').value.trim()) stmt.note = $('note').value.trim();
+  current = stmt; $('stmt').textContent = jcs(stmt);
+  const S = record?.find((s) => s.network === stmt.network && s.height === stmt.height);
+  $('check').className = 'note ' + (S ? (S.txoutsetHash === stmt.txoutsetHash ? 'ok' : 'bad') : '');
+  $('check').textContent = !record ? '' : S ? (S.txoutsetHash === stmt.txoutsetHash ? 'matches the entry on the record' : 'DISAGREES with the entry on the record: ' + S.txoutsetHash) : 'no entry on the record for this height';
+}
+for (const id of ['dump', 'network', 'method', 'impl', 'note']) $(id).addEventListener('input', build);
+
+let event = null;
+$('sign').onclick = async () => {
+  build(); if (!current) return alert('paste what your node printed first');
+  if (!signer) return alert('choose a key first'); if (!current.implementation) return alert('paste your node\'s subversion');
+  const s = current; const tags = [['d', `${s.network}:${s.height}`], ['network', s.network], ['height', String(s.height)], ['hash', s.blockHash], ['txoutset_hash', s.txoutsetHash], ['method', s.method], ['implementation', s.implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', s.network]];
+  event = await signer.sign({ kind: 33332, pubkey: signer.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: jcs(s) });
+  $('event').textContent = JSON.stringify(event, null, 2); $('out').hidden = false; $('pub').textContent = '';
+};
+$('copy').onclick = () => navigator.clipboard.writeText(JSON.stringify(event, null, 2));
+$('download').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(event, null, 2) + '\n'], { type: 'application/json' })); a.download = `${event.pubkey}.json`; a.click(); };
+$('publish').onclick = () => {
+  const ws = new WebSocket($('relay').value.trim()); $('pub').textContent = 'connecting…';
+  ws.onopen = () => ws.send(JSON.stringify(['EVENT', event]));
+  ws.onmessage = (m) => { const [, , ok, why] = JSON.parse(m.data); $('pub').textContent = ok ? 'accepted: ' + event.id : 'refused: ' + why; ws.close(); };
+  ws.onerror = () => { $('pub').textContent = 'could not reach the relay'; };
+};
+build();
+</script>
+</body>
+</html>
