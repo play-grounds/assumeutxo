@@ -96,7 +96,7 @@ The event the tool wrote for the test above (a throwaway key; the content is the
     ["txoutset_hash", "372bfcaeef1e93892acccda9e700b00bf90f45d73746d69959d33620a3df5518"],
     ["method", "recomputed"],
     ["implementation", "/Satoshi:29.4.2/Knots:20260508/Plumb:6/"],
-    ["client", "assumeutxo sign", "https://play-grounds.github.io/assumeutxo/sign/", "0.0.2"],
+    ["client", "assumeutxo sign", "https://play-grounds.github.io/assumeutxo/sign/", "0.0.1"],
     ["t", "attestation"],
     ["t", "assumeutxo"],
     ["t", "txbt4"]

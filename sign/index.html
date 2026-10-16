@@ -86,7 +86,7 @@ a { color: var(--accent); }
 import { schnorr } from 'https://cdn.jsdelivr.net/npm/@noble/curves@1.6.0/secp256k1/+esm';
 const $ = (id) => document.getElementById(id);
 const RECORD = 'https://assumeutxo.com/';
-const VERSION = '0.0.2', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
+const VERSION = '0.0.1', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
 // genesis by network; forks share their parent's genesis, the block hash in the subject tells them apart
 let GENESIS = { btc: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', tbtc3: '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943', tbtc4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043', signet: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6', xbt: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', txbt4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043' };
 const NETWORKS = Object.keys(GENESIS);

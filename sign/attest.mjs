@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 const HOME = homedir(); const ROOT = process.env.ASSUMEUTXO_SITE ?? `${HOME}/datawiki`; // the record (data/, attestations/)
-export const VERSION = '0.0.2', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
+export const VERSION = '0.0.1', STATEMENT = '0.0.1', KIND = 3332, CLIENT = ['client', 'assumeutxo sign', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
 const sha256file = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
 import { makeRpc } from './rpc.mjs';
