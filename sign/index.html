@@ -27,7 +27,7 @@ a { color: var(--accent); }
 <body>
 <main>
 <h1>Sign an attestation</h1>
-<p class="sub">A formal attestation of an assumeUTXO snapshot, from your node's own output, signed by your key. Experiment; the design is <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/1">issue 1</a> and <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/4">issue 4</a> on the record.</p>
+<p class="sub">A formal attestation of an assumeUTXO snapshot, statement v2, from your node's own output, signed by your key. An attestation is not replaceable: a wrong one stays, and a correction is a new event. Experiment; the design is <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/1">issue 1</a> and <a href="https://github.com/assumeutxo/assumeutxo.github.io/issues/4">issue 4</a> on the record.</p>
 
 <section>
 <h2>1. What your node computed</h2>
@@ -37,10 +37,20 @@ a { color: var(--accent); }
 <div><label for="network">Network</label><select id="network"></select></div>
 <div><label for="method">Method</label><select id="method"><option value="recomputed">recomputed: my node built this set from blocks</option><option value="loaded">loaded: my node loaded this snapshot and validated the chain behind it</option></select></div>
 </div>
+<label for="chainstates">The JSON from <code>getchainstates</code> on the same node (where its chainstate came from, and whether it is validated)</label>
+<textarea id="chainstates" placeholder='{"headers": …, "chainstates": [{"blocks": …, "snapshot_blockhash": …, "validated": true, …}]}' style="min-height:64px"></textarea>
+<label for="snapheight">If the chainstate came from a snapshot: that snapshot's height (from <code>getblockheader &lt;snapshot_blockhash&gt;</code>)</label>
+<input id="snapheight" inputmode="numeric" placeholder="only when snapshot_blockhash is not null">
 <label for="impl">Implementation: the <code>subversion</code> from your node's <code>getnetworkinfo</code>, pasted, not typed</label>
 <input id="impl" placeholder="/Satoshi:29.0.0/" spellcheck="false">
-<label for="note">Note (optional, the only free text in the statement)</label>
-<input id="note" placeholder="dumptxoutset rollback=… on an unpruned node, today">
+<label for="computed">When the node computed it</label>
+<input id="computed" type="datetime-local" step="1">
+<details><summary class="note">Optional: build, commit, binary and file hashes (claims about your software; shown in grey until a reproducible build stands behind them)</summary>
+<div class="row"><div><label for="build">Release tag (<code>bitcoind --version</code>)</label><input id="build" spellcheck="false" placeholder="v29.0.0"></div><div><label for="commit">Source commit</label><input id="commit" spellcheck="false" placeholder="40 hex"></div></div>
+<div class="row"><div><label for="binsha">sha256 of the bitcoind binary</label><input id="binsha" spellcheck="false" placeholder="64 hex"></div><div><label for="filesha">sha256 of the snapshot file written</label><input id="filesha" spellcheck="false" placeholder="64 hex"></div></div>
+</details>
+<label for="note">Note (optional; at most 200 characters, no links)</label>
+<input id="note" maxlength="200" placeholder="dumptxoutset rollback=… on an unpruned node">
 <p id="facts" class="note"></p>
 </section>
 
@@ -61,7 +71,7 @@ a { color: var(--accent); }
 </section>
 
 <section id="out" hidden>
-<h2>4. The event (kind 33332)</h2>
+<h2>4. The event (kind 3332, not replaceable)</h2>
 <pre id="event"></pre>
 <button id="copy">Copy</button><button id="download">Download</button>
 <label for="relay">Publish to a relay (your click, your event)</label>
@@ -76,8 +86,10 @@ a { color: var(--accent); }
 import { schnorr } from 'https://cdn.jsdelivr.net/npm/@noble/curves@1.6.0/secp256k1/+esm';
 const $ = (id) => document.getElementById(id);
 const RECORD = 'https://assumeutxo.com/';
-const CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/'];
-const NETWORKS = ['btc', 'tbtc3', 'tbtc4', 'signet', 'xbt', 'txbt4'];
+const VERSION = '0.0.2', KIND = 3332, CLIENT = ['client', 'assumeutxo sign page', 'https://play-grounds.github.io/assumeutxo/sign/', VERSION];
+// genesis by network; forks share their parent's genesis, the block hash in the subject tells them apart
+let GENESIS = { btc: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', tbtc3: '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943', tbtc4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043', signet: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6', xbt: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f', txbt4: '00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043' };
+const NETWORKS = Object.keys(GENESIS);
 const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
 const unhex = (h) => Uint8Array.from(h.match(/../g), (x) => parseInt(x, 16));
 const sha256 = async (s) => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
@@ -85,7 +97,8 @@ const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Arr
 
 // networks, from the record when reachable
 for (const n of NETWORKS) $('network').add(new Option(n, n));
-fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const ids = j.networks.map((n) => n.id); $('network').replaceChildren(...ids.map((id) => new Option(id, id))); build(); }).catch(() => {});
+fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const N = j.networks; GENESIS = Object.fromEntries(N.map((n) => [n.id, n.genesis ?? N.find((m) => '#' + m.id === n.forkOf?.['@id'])?.genesis])); $('network').replaceChildren(...Object.keys(GENESIS).map((id) => new Option(id, id))); build(); }).catch(() => {});
+$('computed').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19);
 let record = null; fetch(RECORD + 'data/snapshots.json').then((r) => r.json()).then((j) => { record = j.snapshots; build(); }).catch(() => {});
 
 let signer = null; // { pubkey, sign(event) }
@@ -107,25 +120,47 @@ function facts() {
   if (j.hash_serialized_3 && j.bestblock) return { height: j.height, blockHash: j.bestblock, txoutsetHash: j.hash_serialized_3, coins: j.txouts, from: 'gettxoutsetinfo' };
   return { error: 'neither a dumptxoutset result nor a gettxoutsetinfo result' };
 }
+function provenance() { // from getchainstates: the active chainstate is listed last
+  const t = $('chainstates').value.trim(); if (!t) return { error: 'paste getchainstates too' }; let j; try { j = JSON.parse(t); } catch { return { error: 'getchainstates is not JSON' }; }
+  const a = j.chainstates?.at(-1); if (!a) return { error: 'getchainstates has no chainstates' };
+  if (!a.snapshot_blockhash) return { chainstate: 'full', validated: !!a.validated };
+  const h = Number($('snapheight').value); if (!h) return { error: 'this node started from a snapshot: give that snapshot\'s height' }; return { chainstate: 'snapshot:' + h, validated: !!a.validated, snapshotHeight: h };
+}
 let current = null;
 function build() {
-  const f = facts(); $('facts').textContent = f?.error ? f.error : f ? `${f.from}: height ${f.height}, ${f.coins ?? '?'} coins` : '';
-  if (!f || f.error) { $('stmt').textContent = '…'; $('check').textContent = ''; current = null; return; }
-  const stmt = { v: 1, network: $('network').value, height: f.height, blockHash: f.blockHash, txoutsetHash: f.txoutsetHash, method: $('method').value, implementation: $('impl').value.trim(), at: new Date().toISOString().slice(0, 10), by: signer ? 'did:nostr:' + signer.pubkey : '(no key yet)' };
-  if (f.coins) stmt.coins = f.coins; if (f.chainTxCount) stmt.chainTxCount = f.chainTxCount; if ($('note').value.trim()) stmt.note = $('note').value.trim();
-  current = stmt; $('stmt').textContent = jcs(stmt);
-  const S = record?.find((s) => s.network === stmt.network && s.height === stmt.height);
-  $('check').className = 'note ' + (S ? (S.txoutsetHash === stmt.txoutsetHash ? 'ok' : 'bad') : '');
-  $('check').textContent = !record ? '' : S ? (S.txoutsetHash === stmt.txoutsetHash ? 'matches the entry on the record' : 'DISAGREES with the entry on the record: ' + S.txoutsetHash) : 'no entry on the record for this height';
+  const f = facts(); const p = provenance(); const v = (id) => $(id).value.trim();
+  const problems = [];
+  if (f?.error) problems.push(f.error); if (p.error) problems.push(p.error);
+  if (f && !f.error && !p.error) {
+    if ($('method').value === 'loaded' && !(p.snapshotHeight && p.validated)) problems.push('loaded means: this node started from the snapshot and background validation finished; this node reports ' + p.chainstate + ', validated ' + p.validated);
+    if ($('method').value === 'recomputed' && !p.validated) problems.push('recomputed needs a validated chainstate');
+    if ($('method').value === 'recomputed' && p.snapshotHeight && p.snapshotHeight >= f.height) problems.push('this node\'s chainstate came from a snapshot at ' + p.snapshotHeight + ': it has not recomputed ' + f.height);
+  }
+  if (/:\/\/|www\./i.test(v('note'))) problems.push('no links in the note: a statement carries facts, not pointers');
+  $('facts').textContent = problems.length ? problems.join(' · ') : f ? `${f.from}: height ${f.height}, ${f.coins ?? '?'} coins · ${p.chainstate}, validated ${p.validated}` : '';
+  $('facts').className = 'note' + (problems.length ? ' bad' : '');
+  if (!f || problems.length) { $('stmt').textContent = '…'; $('check').textContent = ''; current = null; return; }
+  const hex64 = (id) => /^[0-9a-f]{64}$/i.test(v(id)) ? v(id).toLowerCase() : undefined;
+  const subject = { network: v('network'), genesis: GENESIS[v('network')], height: f.height, blockHash: f.blockHash, txoutsetHash: f.txoutsetHash, hashType: 'hash_serialized_3' };
+  if (f.coins) subject.coins = f.coins; if (f.chainTxCount) subject.chainTxCount = f.chainTxCount; if (hex64('filesha')) subject.fileSha256 = hex64('filesha');
+  const claim = { method: $('method').value, chainstate: p.chainstate, validated: p.validated, implementation: v('impl') };
+  if (v('build')) claim.build = v('build'); if (/^[0-9a-f]{40}$/i.test(v('commit'))) claim.commit = v('commit').toLowerCase(); if (hex64('binsha')) claim.binarySha256 = hex64('binsha');
+  claim.computedAt = v('computed') ? new Date(v('computed')).toISOString().slice(0, 19) + 'Z' : undefined; if (v('note')) claim.note = v('note');
+  const stmt = { v: 2, type: 'assumeutxo-attestation', subject, claim };
+  current = stmt; $('stmt').textContent = JSON.stringify(stmt, null, 2) + '\n\ncanonical: ' + jcs(stmt);
+  const S = record?.find((s) => s.network === subject.network && s.height === subject.height);
+  $('check').className = 'note ' + (S ? (S.txoutsetHash === subject.txoutsetHash ? 'ok' : 'bad') : '');
+  $('check').textContent = !record ? '' : S ? (S.txoutsetHash === subject.txoutsetHash ? 'matches the entry on the record' : 'DISAGREES with the entry on the record: ' + S.txoutsetHash) : 'no entry on the record for this height';
 }
-for (const id of ['dump', 'network', 'method', 'impl', 'note']) $(id).addEventListener('input', build);
+for (const id of ['dump', 'chainstates', 'snapheight', 'network', 'method', 'impl', 'computed', 'build', 'commit', 'binsha', 'filesha', 'note']) $(id).addEventListener('input', build);
 
 let event = null;
 $('sign').onclick = async () => {
   build(); if (!current) return alert('paste what your node printed first');
-  if (!signer) return alert('choose a key first'); if (!current.implementation) return alert('paste your node\'s subversion');
-  const s = current; const tags = [['d', `${s.network}:${s.height}`], ['network', s.network], ['height', String(s.height)], ['hash', s.blockHash], ['txoutset_hash', s.txoutsetHash], ['method', s.method], ['implementation', s.implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', s.network]];
-  event = await signer.sign({ kind: 33332, pubkey: signer.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: jcs(s) });
+  if (!signer) return alert('choose a key first'); if (!current.claim.implementation) return alert('paste your node\'s subversion');
+  const { subject: s, claim: c } = current; // tags repeat the subject for relay queries; the content is authoritative
+  const tags = [['network', s.network], ['height', String(s.height)], ['hash', s.blockHash], ['txoutset_hash', s.txoutsetHash], ['method', c.method], ['implementation', c.implementation], CLIENT, ['t', 'attestation'], ['t', 'assumeutxo'], ['t', s.network]];
+  event = await signer.sign({ kind: KIND, pubkey: signer.pubkey, created_at: Math.floor(Date.now() / 1000), tags, content: jcs(current) });
   $('event').textContent = JSON.stringify(event, null, 2); $('out').hidden = false; $('pub').textContent = '';
 };
 $('copy').onclick = () => navigator.clipboard.writeText(JSON.stringify(event, null, 2));
