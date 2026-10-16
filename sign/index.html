@@ -97,8 +97,8 @@ const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Arr
 for (const n of NETWORKS) $('network').add(new Option(n, n));
 fetch(RECORD + 'data/networks.jsonld').then((r) => r.json()).then((j) => { const N = j.networks; GENESIS = Object.fromEntries(N.map((n) => [n.id, n.genesis ?? N.find((m) => '#' + m.id === n.forkOf?.['@id'])?.genesis])); const want = $('network').value; $('network').replaceChildren(...Object.keys(GENESIS).map((id) => new Option(id, id))); if (GENESIS[want]) $('network').value = want; build(); }).catch(() => {});
 $('computed').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19);
-// fields from the link: ?network=tbtc4&height=150000&method=recomputed&impl=…&note=… (the facts themselves are never in a link; they come from the node)
-{ const q = new URLSearchParams(location.search); for (const [k, id] of [['network', 'network'], ['method', 'method'], ['impl', 'impl'], ['note', 'note'], ['build', 'build'], ['commit', 'commit']]) if (q.get(k)) $(id).value = q.get(k); if (q.get('height')) $('dump').placeholder = `paste the dumptxoutset output for height ${q.get('height')}`; window.__wantHeight = Number(q.get('height')) || undefined; }
+// fields from the link: ?network=tbtc4&height=150000&method=recomputed&impl=…&computed=…&note=… (the facts themselves are never in a link; they come from the node)
+{ const q = new URLSearchParams(location.search); for (const [k, id] of [['network', 'network'], ['method', 'method'], ['impl', 'impl'], ['note', 'note'], ['build', 'build'], ['commit', 'commit']]) if (q.get(k)) $(id).value = q.get(k); if (q.get('computed')) { const d = new Date(q.get('computed')); if (!isNaN(d)) $('computed').value = new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19); } if (q.get('height')) $('dump').placeholder = `paste the dumptxoutset output for height ${q.get('height')}`; window.__wantHeight = Number(q.get('height')) || undefined; }
 let record = null; fetch(RECORD + 'data/snapshots.json').then((r) => r.json()).then((j) => { record = j.snapshots; build(); }).catch(() => {});
 
 let signer = null; // { pubkey, sign(event) }
