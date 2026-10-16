@@ -53,7 +53,7 @@ const { finalizeEvent, publicKey } = await import(`${HOME}/remote/github.com/bit
 const pub = publicKey(Buffer.from(priv, 'hex')); const did = JSON.parse(readFileSync(`${keyDir}/agent.did.json`, 'utf8')).id; if (did !== 'did:nostr:' + pub) throw new Error('the key does not match agent.did.json');
 
 // the statement: subject (what is attested) and claim (what this node did), canonical (RFC 8785)
-const stmt = { v: STATEMENT, type: 'assumeutxo-attestation',
+const stmt = { v: STATEMENT, '@type': 'Attestation',
   subject: { network, genesis, height, blockHash: facts.blockHash, txoutsetHash: facts.txoutsetHash, hashType: 'hash_serialized_3', ...(facts.coins ? { coins: facts.coins } : {}), ...(facts.chainTxCount ? { chainTxCount: facts.chainTxCount } : {}), ...(fileSha256 ? { fileSha256 } : {}) },
   claim: { method, chainstate, validated, implementation, ...(build ? { build } : {}), ...(commit ? { commit } : {}), ...(binarySha256 ? { binarySha256 } : {}), computedAt, ...(note ? { note } : {}) } };
 const content = jcs(stmt);

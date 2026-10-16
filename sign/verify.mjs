@@ -13,7 +13,7 @@ const id = createHash('sha256').update(JSON.stringify([0, ev.pubkey, ev.created_
 if (id !== ev.id) fail('id does not match the event'); if (!schnorr.verify(ev.sig, ev.id, ev.pubkey)) fail('signature invalid');
 if (ev.kind !== 3332) fail('kind is ' + ev.kind + ', not 3332');
 const st = JSON.parse(ev.content); if (jcs(st) !== ev.content) fail('content is not canonical (RFC 8785)');
-if (st.v !== '0.0.1' || st.type !== 'assumeutxo-attestation') fail('not an assumeutxo-attestation statement 0.0.1');
+if (st.v !== '0.0.1' || st['@type'] !== 'Attestation') fail('not an Attestation statement 0.0.1');
 const { subject: s, claim: c } = st; for (const k of ['network', 'genesis', 'height', 'blockHash', 'txoutsetHash', 'hashType']) if (s?.[k] === undefined) fail('subject lacks ' + k);
 for (const k of ['method', 'chainstate', 'validated', 'implementation', 'computedAt']) if (c?.[k] === undefined) fail('claim lacks ' + k);
 if (!['recomputed', 'loaded'].includes(c.method)) fail('method ' + c.method); if (c.method === 'loaded' && !(c.validated && c.chainstate.startsWith('snapshot:'))) fail('loaded without a validated snapshot chainstate');

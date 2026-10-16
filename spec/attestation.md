@@ -12,7 +12,7 @@ attester of the same snapshot; and the **claim**, what this node did to know it.
 ```json
 {
   "v": "0.0.1",
-  "type": "assumeutxo-attestation",
+  "@type": "Attestation",
   "subject": {
     "network": "tbtc4",
     "genesis": "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043",
@@ -53,6 +53,10 @@ recomputed nothing and may not say `recomputed`. `implementation` is the BIP 14 
 `commit` and `binarySha256` are claims about the software, worth what the reproducible builds behind them are worth; readers show them
 as said, not as fact. `computedAt` is when the node computed the hash, not when the statement was signed. `note` is at most 200
 characters and carries no links.
+
+`@type` is `Attestation`; the JSON-LD context that defines it and the other terms is not in the signed bytes (no hosts in
+signed content) and is published beside the record for readers to attach; until it exists the terms are as described here.
+Endorsement and FraudProof will be types in the same vocabulary.
 
 There is no signer field: identity lives in the envelope, so the same statement can be signed by a Nostr key or a GPG key.
 

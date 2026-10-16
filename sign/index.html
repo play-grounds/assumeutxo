@@ -146,7 +146,7 @@ function build() {
   const claim = { method: $('method').value, chainstate: p.chainstate, validated: p.validated, implementation: v('impl') };
   if (v('build')) claim.build = v('build'); if (/^[0-9a-f]{40}$/i.test(v('commit'))) claim.commit = v('commit').toLowerCase(); if (hex64('binsha')) claim.binarySha256 = hex64('binsha');
   claim.computedAt = v('computed') ? new Date(v('computed')).toISOString().slice(0, 19) + 'Z' : undefined; if (v('note')) claim.note = v('note');
-  const stmt = { v: STATEMENT, type: 'assumeutxo-attestation', subject, claim };
+  const stmt = { v: STATEMENT, '@type': 'Attestation', subject, claim };
   current = stmt; $('stmt').textContent = JSON.stringify(stmt, null, 2) + '\n\ncanonical: ' + jcs(stmt);
   const S = record?.find((s) => s.network === subject.network && s.height === subject.height);
   $('check').className = 'note ' + (S ? (S.txoutsetHash === subject.txoutsetHash ? 'ok' : 'bad') : '');
