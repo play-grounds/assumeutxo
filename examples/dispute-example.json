@@ -1,0 +1,54 @@
+{
+  "kind": 3331,
+  "pubkey": "c77fba35e5cdf0f3e7c37655c6ccd19924c462f5ae9629cf2f9fa0950a59199d",
+  "created_at": 1792140000,
+  "content": "{\"@type\":\"Dispute\",\"claim\":{\"chainstate\":\"full\",\"computedAt\":\"2026-10-16T07:29:16Z\",\"implementation\":\"/Satoshi:29.4.2/Knots:20260508/Plumb:6/\",\"method\":\"recomputed\",\"note\":\"example only: the contradicted hash and the attestation id are made up; a throwaway key\",\"validated\":true},\"disputes\":{\"attestations\":[\"0000000000000000000000000000000000000000000000000000000000000000\"],\"txoutsetHash\":\"deadbeef00000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"proofType\":\"recompute\"},\"subject\":{\"blockHash\":\"0000000000d9877342754dea8ec1eb24631517d38e3443c370465ee53a8b7434\",\"chainTxCount\":14810011,\"coins\":14228512,\"genesis\":\"00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043\",\"hashType\":\"hash_serialized_3\",\"height\":150000,\"network\":\"tbtc4\",\"txoutsetHash\":\"ca068cae50679d7c947454bbe4f0e6aeec1fbe2c6c2735a08bb988623649f950\"},\"v\":\"0.0.1\"}",
+  "tags": [
+    [
+      "v",
+      "0.0.1"
+    ],
+    [
+      "e",
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      "",
+      "disputes"
+    ],
+    [
+      "txoutset_hash",
+      "deadbeef00000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+      "network",
+      "tbtc4"
+    ],
+    [
+      "height",
+      "150000"
+    ],
+    [
+      "hash",
+      "0000000000d9877342754dea8ec1eb24631517d38e3443c370465ee53a8b7434"
+    ],
+    [
+      "method",
+      "recomputed"
+    ],
+    [
+      "client",
+      "assumeutxo",
+      "https://www.npmjs.com/package/assumeutxo",
+      "0.0.1"
+    ],
+    [
+      "t",
+      "dispute"
+    ],
+    [
+      "t",
+      "assumeutxo"
+    ]
+  ],
+  "id": "c93427a75beeec8b6aecc9b9e82c94185c420db1f0bce150f4945230d686aeb9",
+  "sig": "019027241e61d301530765b6ce12e827d71b3550cb45ca3e59cec1497f4885063853d3b22ab214dc9091b221e0352eace876c78c40a0a2805aae0dcf6db032ab"
+}
