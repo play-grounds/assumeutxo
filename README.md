@@ -7,6 +7,6 @@ drafts of the shapes they use. Nothing here is the record. What proves itself gr
 - `sign/`: make a formal attestation (statement 0.0.1, kind 3332) from a node's own `dumptxoutset` output. [The page](https://play-grounds.github.io/assumeutxo/sign/) signs in the browser (NIP-07 or a pasted key); `sign/attest.mjs` signs from a node over RPC, reading the implementation, build and commit instead of asking.
 - `sign/verify.mjs`: check an attestation file: signature, kind, shape, tags against content.
 - `endorse/`: one key vouching for another. (next)
-- `spec/attestation.md`: the statement (0.0.1: subject and claim; bumped on every change until the first attestation worth a name, which makes it 1.0.0), the Nostr envelope (kind 3332, not replaceable), the GPG envelope (next).
+- `spec/attestation.md`: a pointer; the spec graduated to [NIP-332](https://nip-332.github.io/spec/).
 
 MIT.
